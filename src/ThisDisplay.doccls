@@ -1,0 +1,170 @@
+﻿'Objects
+Dim tagsCollection As Object
+
+Private Sub Display_Open()
+    ' Create dictinary for tags
+    Set tagsDict = CreateObject("scripting.dictionary")
+    'Set tagsCollection = New Collection
+    
+    
+    comboBlockSize.Clear
+    
+    With comboBlockSize
+        .AddItem "2000"
+        .AddItem "5000"
+    End With
+        
+    editTargetDir.Text = CurDir()
+        
+End Sub
+
+
+Sub ManualAddTag()
+    AddTag (editTagName.value)
+    editTagName.Text = ""
+End Sub
+
+
+Sub AddTag(tagPath As String)
+    
+'    If Not tagsCollection.exists(tagPath) Then
+'        tagsCollection.Add (tagPath)
+        ListSelectedTags.AddItem (tagPath)
+'    End If
+End Sub
+
+Sub RemoveSelectedTags()
+
+    ' https://pisquare.osisoft.com/message/2804#2804
+    Dim lst As MSForms.ListBox
+    Set lst = ListSelectedTags
+
+    Dim i As Integer
+    For i = lst.ListCount - 1 To 0 Step -1
+    
+        If lst.Selected(i) Then
+            lst.RemoveItem (i)
+        End If
+    Next i
+End Sub
+
+Sub ClearSelectedTagsList()
+    ListSelectedTags.Clear
+End Sub
+
+Sub ClearExtractedTagsList()
+    listExtractedTags.Clear
+End Sub
+
+Sub ClearPreview()
+    listValues.Clear
+    textTotalExtracted.value = ""
+End Sub
+
+Sub ImportTagsFromOtherDisplay()
+
+End Sub
+
+Sub StartExtraction()
+
+    ' Check if something selected
+    If ThisDisplay.ListSelectedTags.ListCount = 0 Then
+        MsgBox "No tags added."
+        Exit Sub
+    End If
+
+    ' Check if valid directory
+    If Tools.FolderExists(editTargetDir.Text) = False Then
+        MsgBox ("Invalid directory selected.")
+        Exit Sub
+    End If
+       
+
+   TagExtractor.StartExtraction (False)
+End Sub
+
+Sub PreviewSelectedTag()
+
+    Dim lst As MSForms.ListBox
+    Set lst = ThisDisplay.ListSelectedTags
+
+    ' Check if something selected
+    If ThisDisplay.ListSelectedTags.ListCount = 0 Then
+        MsgBox "No tags added."
+        Exit Sub
+    End If
+    
+    If Not lst.Selected(lst.ListIndex) Then
+        MsgBox "No tags selected from the added list"
+        Exit Sub
+    End If
+
+    TagExtractor.StartExtraction (True)
+End Sub
+
+Sub ImportTagNamesFromFile()
+    Dim fileNo As Integer
+    Dim DataLine As String
+    Dim importFilePath As Variant
+
+    importFilePath = Application.GetOpenFilename(Title:="Open Tags file")
+    If VarType(importFilePath) = vbBoolean Then
+        Exit Sub
+    End If
+    
+    
+    
+    fileNo = FreeFile()
+    Open importFilePath For Input As #fileNo
+    
+    While Not EOF(fileNo)
+        Line Input #fileNo, DataLine ' read in data 1 line at a time
+
+        ListSelectedTags.AddItem (DataLine)
+    Wend
+    
+    Close #fileNo
+    
+End Sub
+
+Sub SearchTagsDialog()
+     
+    ' Example taken from here: https://pisquare.osisoft.com/thread/10063
+
+    Dim ptlist As PointList
+    ' On Error Resume Next
+    Set ptlist = ApplicationObject.TagSearch.Show
+
+    For Each pt In ptlist
+        ListSelectedTags.AddItem ("\\" & pt.Server & "\" & pt.Name)
+    Next pt
+End Sub
+
+Sub AddValueToSelectedTag()
+
+    ' Vars
+    Dim lst As MSForms.ListBox
+    Dim tagPath As String
+    Dim dblValue As Double
+
+    ' Check if something selected
+    If editManualTagValue.value = "" Then
+        MsgBox "Please ented value to be added."
+        Exit Sub
+    End If
+
+    On Error GoTo ErrHandler
+  
+    Set lst = ThisDisplay.ListSelectedTags
+    
+    tagPath = ListSelectedTags.List(lst.ListIndex, 0)
+    
+    dblValue = CDbl(editManualTagValue.value)
+    TagDataModifier.AddNewTagValue tagPath, dblValue
+'    TagDataModifier.Test tagPath, dblValue
+    
+Exit Sub
+ErrHandler:
+    MsgBox Err.Description
+
+End Sub
