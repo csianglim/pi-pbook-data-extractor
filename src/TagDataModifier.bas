@@ -5,7 +5,7 @@ Public Sub AddNewTagValue(ByRef tagPath As String, ByVal value As Double)
     
     ' Vars
     Dim pipt As PIPoint
-    Dim pdata As pidata
+    Dim pdata As PIData
     Dim srv As Server
     Dim nam As Integer
     Dim YesOrNoAnswerToMessageBox As String

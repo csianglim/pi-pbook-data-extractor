@@ -13,6 +13,14 @@ Private Sub Display_Open()
         .AddItem "2000"
         .AddItem "5000"
     End With
+    
+    comboExtractionMode.Clear
+    
+    With comboExtractionMode
+        .AddItem "Recorded Values"
+        .AddItem "Time-Weighted Averages"
+        .AddItem "Event-Weighted Averages"
+    End With
         
     editTargetDir.Text = CurDir()
         

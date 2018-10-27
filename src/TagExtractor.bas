@@ -15,6 +15,15 @@ Sub StartExtraction(isPreview As Boolean)
     Dim totalValues As Long
     Dim DateStart As Date, DateEnd As Date
     Dim fileName As String, textData As String, textRow As String, fileNo As Integer
+    Dim num_days As Long
+    
+    ' New vars for custom extraction duration
+    Dim extractionMethod As String
+    Dim retValue As NamedValues
+    Dim pdata As PIData
+    Dim ipid2 As IPIData2
+    Dim duration As String
+    Dim calcType As CalculationBasisConstants
     
     ' Clear previous values
     ThisDisplay.listValues.Clear
@@ -22,6 +31,9 @@ Sub StartExtraction(isPreview As Boolean)
     
     ' Get block size
     blockSize = CInt(ThisDisplay.comboBlockSize.value)
+    
+    ' Get extraction method
+    extractionMethod = CStr(ThisDisplay.comboExtractionMode.value)
     
     ' Init controls
 
@@ -61,20 +73,32 @@ Sub StartExtraction(isPreview As Boolean)
             ' If preview
             If isPreview Then
                 
-                
                 Dim lst As MSForms.ListBox
                 Set lst = ThisDisplay.ListSelectedTags
                 
                 If lst.Selected(i) Then
-                
-                    Set tagValueArray = tag.Data.RecordedValuesByCount(DateStart, blockSize, dForward, btInside)
-                
+                    
+                    ' TODO: Respect blockSize when retrieving data using averages
+                    If extractionMethod = "Recorded Values" Then
+                        Set tagValueArray = tag.Data.RecordedValuesByCount(DateStart, blockSize, dForward, btInside)
+                    Else
+                        Set pdata = tag.Data
+                        Set ipid2 = pdata ' get pointer to IPIData2 Interface https://techsupport.osisoft.com/Documentation/PI-SDK/PI_SDK_Interfaces/PI-SDK_Objects/IPIData2/IPIData2Ex.htm
+                        duration = ThisDisplay.editInterval.value
+                        If extractionMethod = "Time-Weighted Averages" Then
+                            calcType = cbTimeWeighted
+                        Else
+                            calcType = cbEventWeighted
+                        End If
+                        Set retValue = ipid2.Summaries2(DateStart, DateEnd, duration, asAverage, calcType) 'Summaries2 returns a NamedValues collection of NamedValues, e.g. the Average.
+                        Set tagValueArray = retValue("Average").value 'Get the PIValues from the NamedValues
+                    End If
                     
                     ' Display results
                     For Each tagValue In tagValueArray
                       ThisDisplay.listValues.AddItem CStr(tagValue.TimeStamp.LocalDate) + vbTab + CStr(tagValue.value)
                     Next
-                
+                    
                     ' Display statistics
                     ThisDisplay.textTotalExtracted = CStr(tagValueArray.Count)
                 
@@ -103,13 +127,30 @@ Sub StartExtraction(isPreview As Boolean)
                 
                 ' Iterate on blocks
                 Do While DateStart < DateEnd
-                
-                    Set tagValueArray = tag.Data.RecordedValuesByCount(DateStart, blockSize, dForward, btInside)
-                
+                    
+                    ' TODO: Respect blockSize when retrieving data using averages
+                    If extractionMethod = "Recorded Values" Then
+                        Set tagValueArray = tag.Data.RecordedValuesByCount(DateStart, blockSize, dForward, btInside)
+                    Else
+                        Set pdata = tag.Data
+                        Set ipid2 = pdata ' get pointer to IPIData2 Interface https://techsupport.osisoft.com/Documentation/PI-SDK/PI_SDK_Interfaces/PI-SDK_Objects/IPIData2/IPIData2Ex.htm
+                        duration = ThisDisplay.editInterval.value
+                        If extractionMethod = "Time-Weighted Averages" Then
+                            calcType = cbTimeWeighted
+                        Else
+                            calcType = cbEventWeighted
+                        End If
+                        Set retValue = ipid2.Summaries2(DateStart, DateEnd, duration, asAverage, calcType) 'Summaries2 returns a NamedValues collection of NamedValues, e.g. the Average.
+                        Set tagValueArray = retValue("Average").value 'Get the PIValues from the NamedValues
+                        
+                        ' To Exit the Loop
+                        DateStart = DateEnd
+                    End If
+                    
                     ' Check if not more values available
                     If tagValueArray.Count <= 1 Then
                         Exit Do
-                     End If
+                    End If
                     
                 
                     ' Store block to file
